@@ -18,8 +18,10 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #4b5563; }
         .form-group label span { color: #ef4444; margin-left: 2px; }
-        input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; }
-        textarea { resize: vertical; height: 80px; }
+        input[type="text"], input[type="date"], input[type="number"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; background: #fff; }
+        textarea { resize: vertical; height: 70px; }
+        .dynamic-rows { background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
+        .total-box { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-weight: bold; text-align: right; color: #1e40af; margin-bottom: 15px; }
         .photo-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; background: #fff; cursor: pointer; position: relative; }
         .photo-upload input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         #photo-preview { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -27,7 +29,7 @@
         .submit-btn { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
         .submit-btn:disabled { background: #9ca3af; }
         .data-item { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
-        .data-item-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
+        .data-item-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; font-size: 15px; }
         .img-grid { display: flex; gap: 5px; margin-top: 10px; }
         .img-grid img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
     </style>
@@ -38,7 +40,6 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-        // 사용자님의 파이어베이스 설정값 적용 완료
         const firebaseConfig = {
             apiKey: "AIzaSyBJdPArpj_i61crrpEomzpN73euuwh_X84",
             authDomain: "yang-delivery-system.firebaseapp.com",
@@ -60,7 +61,7 @@
 <body>
 
 <header>
-    <h1>가전 배송환경 및 양중비 관제 (Cloud)</h1>
+    <h1>가전 배송환경 및 양중비 관제 System</h1>
 </header>
 
 <div class="tabs">
@@ -86,15 +87,62 @@
         </div>
         <div class="form-group">
             <label>납품번호<span>*</span></label>
-            <input type="text" id="delivery_id" placeholder="예: 80123456" required>
+            <input type="text" id="delivery_id" placeholder="예: 7123456789" required>
         </div>
         <div class="form-group">
             <label>차량번호<span>*</span></label>
-            <input type="text" id="car_id" placeholder="예: 12가 3456" required>
+            <input type="text" id="car_id" placeholder="예: 대구81아1234" required>
         </div>
         <div class="form-group">
-            <label>양중비 결제 상세 사유<span>*</span></label>
-            <textarea id="reason_detail" placeholder="상세 사유 입력" required></textarea>
+            <label>가옥구조<span>*</span></label>
+            <select id="house_type" required>
+                <option value="">선택</option>
+                <option value="아파트">아파트</option>
+                <option value="단독주택">단독주택</option>
+                <option value="상가">상가</option>
+                <option value="빌라">빌라</option>
+                <option value="기타">기타</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>지역<span>*</span></label>
+            <input type="text" id="region" placeholder="예: 해운대구 우동" required>
+        </div>
+        <div class="form-group">
+            <label>층수<span>*</span></label>
+            <input type="number" id="floor" placeholder="예: 5" required>
+        </div>
+        <div class="form-group">
+            <label>모델명<span>*</span></label>
+            <input type="text" id="model_name" placeholder="예: RF85C9011AP" required>
+        </div>
+        <div class="form-group">
+            <label>양중비청구 댓수 (1~10)<span>*</span></label>
+            <select id="quantity" required onchange="renderItemRows()">
+                <option value="">선택</option>
+                <option value="1">1대</option>
+                <option value="2">2대</option>
+                <option value="3">3대</option>
+                <option value="4">4대</option>
+                <option value="5">5대</option>
+                <option value="6">6대</option>
+                <option value="7">7대</option>
+                <option value="8">8대</option>
+                <option value="9">9대</option>
+                <option value="10">10대</option>
+            </select>
+        </div>
+
+        <!-- 댓수별 동적 입력 영역 (제품무게, 결제금액) -->
+        <div id="dynamic-items-container"></div>
+
+        <div class="total-box" id="total-amount-box">
+            총 합계금액: 0 원
+        </div>
+
+        <div class="form-group">
+            <label>특수장비사용불가 (양중비 결제 상세 사유)<span>*</span></label>
+            <textarea id="reason_detail" placeholder="상세내용" required></textarea>
         </div>
         <div class="form-group">
             <label>환경사진 업로드 (최대 3장)<span>*</span></label>
@@ -129,7 +177,43 @@
         if (tabName === 'dashboard') loadData();
     }
 
-    // 이미지 자동 압축
+    // 대수 선택에 따라 무게 및 금액 입력 칸 동적 생성
+    function renderItemRows() {
+        const qty = parseInt(document.getElementById('quantity').value) || 0;
+        const container = document.getElementById('dynamic-items-container');
+        container.innerHTML = '';
+
+        for (let i = 1; i <= qty; i++) {
+            const div = document.createElement('div');
+            div.className = 'dynamic-rows';
+            div.innerHTML = `
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:5px; display:block;">[ ${i}번째 제품 상세 ]</label>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <input type="number" placeholder="제품무게 (kg)" class="item-weight" required style="margin-bottom:8px;">
+                    </div>
+                    <div style="flex:1;">
+                        <input type="number" placeholder="결제금액 (원)" class="item-price" required oninput="calculateTotal()" style="margin-bottom:8px;">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+        calculateTotal();
+    }
+
+    // 총 합계금액 자동 계산
+    function calculateTotal() {
+        const priceInputs = document.querySelectorAll('.item-price');
+        let total = 0;
+        priceInputs.forEach(input => {
+            const val = parseFloat(input.value) || 0;
+            total += val;
+        });
+        document.getElementById('total-amount-box').innerText = `총 합계금액: ${total.toLocaleString()} 원`;
+    }
+
+    // 이미지 압축
     document.getElementById('photos').addEventListener('change', (e) => {
         const preview = document.getElementById('photo-preview');
         preview.innerHTML = '';
@@ -187,11 +271,31 @@
                 photoUrls.push(url);
             }
 
+            // 각 대수별 무게 및 금액 배열 수집
+            const items = [];
+            const weightInputs = document.querySelectorAll('.item-weight');
+            const priceInputs = document.querySelectorAll('.item-price');
+            let totalPrice = 0;
+
+            for(let i=0; i<weightInputs.length; i++) {
+                const w = weightInputs[i].value;
+                const p = parseFloat(priceInputs[i].value) || 0;
+                totalPrice += p;
+                items.push({ weight: w, price: p });
+            }
+
             await addDoc(collection(window.db, "deliveries"), {
                 date: document.getElementById('date').value,
                 center: document.getElementById('center').value,
                 delivery_id: document.getElementById('delivery_id').value,
                 car_id: document.getElementById('car_id').value,
+                house_type: document.getElementById('house_type').value,
+                region: document.getElementById('region').value,
+                floor: document.getElementById('floor').value,
+                model_name: document.getElementById('model_name').value,
+                quantity: document.getElementById('quantity').value,
+                items: items,
+                totalPrice: totalPrice,
                 reason_detail: document.getElementById('reason_detail').value,
                 photos: photoUrls,
                 createdAt: new Date()
@@ -199,6 +303,8 @@
 
             alert('Firebase 클라우드에 성공적으로 저장되었습니다!');
             e.target.reset();
+            document.getElementById('dynamic-items-container').innerHTML = '';
+            document.getElementById('total-amount-box').innerText = '총 합계금액: 0 원';
             document.getElementById('photo-preview').innerHTML = '';
             compressedPhotos = [];
         } catch (err) {
@@ -230,13 +336,22 @@
                 const data = doc.data();
                 const el = document.createElement('div');
                 el.className = 'data-item';
+                
+                let itemsHtml = '';
+                if(data.items && data.items.length > 0) {
+                    itemsHtml = data.items.map((item, idx) => `&nbsp;&nbsp;- ${idx+1}번: 무게 ${item.weight}kg / 금액 ${Number(item.price).toLocaleString()}원<br>`).join('');
+                }
+
                 el.innerHTML = `
                     <div class="data-item-header">
-                        <span>${data.delivery_id} (${data.car_id})</span>
+                        <span>납품번호: ${data.delivery_id} (${data.car_id})</span>
                         <span>${data.date}</span>
                     </div>
-                    <p><b>센터:</b> ${data.center}</p>
-                    <p><b>사유:</b> ${data.reason_detail}</p>
+                    <p><b>센터:</b> ${data.center} | <b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
+                    <p><b>모델명:</b> ${data.model_name} (총 ${data.quantity}대)</p>
+                    <p><b>상세 내역:</b><br>${itemsHtml}</p>
+                    <p style="color:#2563eb; font-weight:bold;"><b>총 합계금액:</b> ${Number(data.totalPrice || 0).toLocaleString()} 원</p>
+                    <p><b>특수장비사용불가 사유:</b> ${data.reason_detail}</p>
                     <div class="img-grid">
                         ${data.photos.map(url => `<a href="${url}" target="_blank"><img src="${url}"></a>`).join('')}
                     </div>
