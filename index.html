@@ -20,7 +20,7 @@
         .form-group label span { color: #ef4444; margin-left: 2px; }
         input[type="text"], input[type="date"], input[type="number"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; background: #fff; }
         textarea { resize: vertical; height: 70px; }
-        .dynamic-rows { background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
+        .dynamic-rows { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
         .total-box { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-weight: bold; text-align: right; color: #1e40af; margin-bottom: 15px; }
         .photo-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; background: #fff; cursor: pointer; position: relative; }
         .photo-upload input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
@@ -112,10 +112,7 @@
             <label>층수<span>*</span></label>
             <input type="number" id="floor" placeholder="예: 5" required>
         </div>
-        <div class="form-group">
-            <label>모델명<span>*</span></label>
-            <input type="text" id="model_name" placeholder="예: RF85C9011AP" required>
-        </div>
+        
         <div class="form-group">
             <label>양중비청구 댓수 (1~10)<span>*</span></label>
             <select id="quantity" required onchange="renderItemRows()">
@@ -133,7 +130,7 @@
             </select>
         </div>
 
-        <!-- 댓수별 동적 입력 영역 (제품무게, 결제금액) -->
+        <!-- 댓수별 동적 입력 영역 (모델명, 제품무게, 결제금액) -->
         <div id="dynamic-items-container"></div>
 
         <div class="total-box" id="total-amount-box">
@@ -177,7 +174,7 @@
         if (tabName === 'dashboard') loadData();
     }
 
-    // 대수 선택에 따라 무게 및 금액 입력 칸 동적 생성
+    // 대수 선택에 따라 모델명, 무게, 금액 입력 칸 동적 생성
     function renderItemRows() {
         const qty = parseInt(document.getElementById('quantity').value) || 0;
         const container = document.getElementById('dynamic-items-container');
@@ -187,13 +184,16 @@
             const div = document.createElement('div');
             div.className = 'dynamic-rows';
             div.innerHTML = `
-                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:5px; display:block;">[ ${i}번째 제품 상세 ]</label>
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ ${i}번째 제품 정보 ]</label>
+                <div style="margin-bottom:8px;">
+                    <input type="text" placeholder="모델명 입력 (예: RF85C9011AP)" class="item-model" required>
+                </div>
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
-                        <input type="number" placeholder="제품무게 (kg)" class="item-weight" required style="margin-bottom:8px;">
+                        <input type="number" placeholder="제품무게 (kg)" class="item-weight" required>
                     </div>
                     <div style="flex:1;">
-                        <input type="number" placeholder="결제금액 (원)" class="item-price" required oninput="calculateTotal()" style="margin-bottom:8px;">
+                        <input type="number" placeholder="결제금액 (원)" class="item-price" required oninput="calculateTotal()">
                     </div>
                 </div>
             `;
@@ -271,17 +271,19 @@
                 photoUrls.push(url);
             }
 
-            // 각 대수별 무게 및 금액 배열 수집
+            // 각 대수별 모델명, 무게, 금액 배열 수집
             const items = [];
+            const modelInputs = document.querySelectorAll('.item-model');
             const weightInputs = document.querySelectorAll('.item-weight');
             const priceInputs = document.querySelectorAll('.item-price');
             let totalPrice = 0;
 
-            for(let i=0; i<weightInputs.length; i++) {
+            for(let i=0; i<modelInputs.length; i++) {
+                const m = modelInputs[i].value;
                 const w = weightInputs[i].value;
                 const p = parseFloat(priceInputs[i].value) || 0;
                 totalPrice += p;
-                items.push({ weight: w, price: p });
+                items.push({ model: m, weight: w, price: p });
             }
 
             await addDoc(collection(window.db, "deliveries"), {
@@ -292,7 +294,6 @@
                 house_type: document.getElementById('house_type').value,
                 region: document.getElementById('region').value,
                 floor: document.getElementById('floor').value,
-                model_name: document.getElementById('model_name').value,
                 quantity: document.getElementById('quantity').value,
                 items: items,
                 totalPrice: totalPrice,
@@ -339,7 +340,7 @@
                 
                 let itemsHtml = '';
                 if(data.items && data.items.length > 0) {
-                    itemsHtml = data.items.map((item, idx) => `&nbsp;&nbsp;- ${idx+1}번: 무게 ${item.weight}kg / 금액 ${Number(item.price).toLocaleString()}원<br>`).join('');
+                    itemsHtml = data.items.map((item, idx) => `&nbsp;&nbsp;- ${idx+1}번: [${item.model}] 무게 ${item.weight}kg / 금액 ${Number(item.price).toLocaleString()}원<br>`).join('');
                 }
 
                 el.innerHTML = `
@@ -348,8 +349,8 @@
                         <span>${data.date}</span>
                     </div>
                     <p><b>센터:</b> ${data.center} | <b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
-                    <p><b>모델명:</b> ${data.model_name} (총 ${data.quantity}대)</p>
-                    <p><b>상세 내역:</b><br>${itemsHtml}</p>
+                    <p><b>청구 대수:</b> 총 ${data.quantity}대</p>
+                    <p><b>제품별 상세 내역:</b><br>${itemsHtml}</p>
                     <p style="color:#2563eb; font-weight:bold;"><b>총 합계금액:</b> ${Number(data.totalPrice || 0).toLocaleString()} 원</p>
                     <p><b>특수장비사용불가 사유:</b> ${data.reason_detail}</p>
                     <div class="img-grid">
