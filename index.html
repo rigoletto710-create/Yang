@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>배송환경 및 양중비 입력·조회 시스템</title>
+    <title>가전 배송환경 및 양중비 관제 System</title>
     <style>
         :root { --primary: #2563eb; --bg: #f3f4f6; --text: #1f2937; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
@@ -18,159 +18,107 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #4b5563; }
         .form-group label span { color: #ef4444; margin-left: 2px; }
-        input[type="text"], input[type="date"], input[type="number"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; -webkit-appearance: none; }
+        input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; }
         textarea { resize: vertical; height: 80px; }
-        input:focus, select:focus, textarea:focus { outline: 2px solid #93c5fd; border-color: #3b82f6; }
         .photo-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; background: #fff; cursor: pointer; position: relative; }
-        .photo-upload:hover { border-color: var(--primary); background: #eff6ff; }
-        .photo-upload svg { width: 40px; height: 40px; color: #9ca3af; margin-bottom: 10px; }
-        .photo-upload p { font-size: 14px; color: #6b7280; }
         .photo-upload input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         #photo-preview { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        #photo-preview img { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
-        .submit-btn { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-        .submit-btn:hover { background: #1d4ed8; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .kpi-card { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; }
-        .kpi-card h3 { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
-        .kpi-card p { font-size: 20px; font-weight: 700; color: var(--text); }
-        .filter-bar { background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 15px; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-        #data-list { display: grid; gap: 10px; }
-        .data-item { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; }
-        .data-item-header { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #f3f4f6; }
-        .data-item-header .date { font-size: 12px; color: #9ca3af; }
-        .data-item-header .id { font-size: 14px; font-weight: 600; color: var(--text); }
-        .data-item-body { display: grid; grid-template-columns: auto 1fr; gap: 10px; font-size: 14px; }
-        .data-item-body .label { color: #6b7280; font-weight: 500; }
-        .data-item-body .value { color: var(--text); }
-        .data-item-body img { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; grid-column: 1 / -1; margin-top: 5px; cursor: pointer; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { max-width: 100%; max-height: 100%; position: relative; }
-        .modal-content img { width: 100%; height: auto; border-radius: 8px; }
-        .close-modal { position: absolute; top: -10px; right: -10px; background: #fff; width: 30px; height: 30px; border-radius: 50%; border: none; font-size: 18px; font-weight: 700; cursor: pointer; color: var(--text); }
-        @media (min-width: 768px) {
-            .container { max-width: 800px; margin: 0 auto; padding: 30px; }
-            .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-            .form-group.full-width { grid-column: 1 / -1; }
-            #data-list { grid-template-columns: repeat(2, 1fr); }
-            .kpi-grid { grid-template-columns: repeat(4, 1fr); }
-        }
+        #photo-preview img { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; }
+        .submit-btn { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
+        .submit-btn:disabled { background: #9ca3af; }
+        .data-item { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
+        .data-item-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
+        .img-grid { display: flex; gap: 5px; margin-top: 10px; }
+        .img-grid img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
     </style>
+
+    <!-- Firebase SDK 연동 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        // 사용자님의 파이어베이스 설정값 적용 완료
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJdPArpj_i61crrpEomzpN73euuwh_X84",
+            authDomain: "yang-delivery-system.firebaseapp.com",
+            projectId: "yang-delivery-system",
+            storageBucket: "yang-delivery-system.firebasestorage.app",
+            messagingSenderId: "723188059505",
+            appId: "1:723188059505:web:35818e40a9a88d34ef7ad0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        window.db = db;
+        window.storage = storage;
+        window.fbFunctions = { collection, addDoc, getDocs, query, orderBy, ref, uploadString, getDownloadURL };
+    </script>
 </head>
 <body>
 
 <header>
-    <h1>가전 배송환경 및 양중비 관제</h1>
+    <h1>가전 배송환경 및 양중비 관제 (Cloud)</h1>
 </header>
 
 <div class="tabs">
     <button class="tab-btn active" onclick="openTab('input')">현장 입력 (기사님용)</button>
-    <button class="tab-btn" onclick="openTab('dashboard')">조회 및 다운로드 (관리자용)</button>
+    <button class="tab-btn" onclick="openTab('dashboard')">조회 (관리자용)</button>
 </div>
 
 <!-- 기사님 입력 화면 -->
 <div id="input-container" class="container active">
     <form id="delivery-form">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>발생일<span>*</span></label>
-                <input type="date" id="date" required>
-            </div>
-            <div class="form-group">
-                <label>센터<span>*</span></label>
-                <select id="center" required>
-                    <option value="">센터 선택</option>
-                    <option value="부산센터">부산센터</option>
-                    <option value="양산센터">양산센터</option>
-                    <option value="김해센터">김해센터</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>납품번호<span>*</span></label>
-                <input type="text" id="delivery_id" placeholder="예: 80123456" required>
-            </div>
-            <div class="form-group">
-                <label>거래선</label>
-                <input type="text" id="customer_name" placeholder="고객명 또는 거래선명">
-            </div>
-            <div class="form-group">
-                <label>차량번호<span>*</span></label>
-                <input type="text" id="car_id" placeholder="예: 12가 3456" required>
-            </div>
-            <div class="form-group">
-                <label>가옥구조<span>*</span></label>
-                <select id="house_type" required>
-                    <option value="">구조 선택</option>
-                    <option value="아파트">아파트</option>
-                    <option value="빌라/다세대">빌라/다세대</option>
-                    <option value="단독주택">단독주택</option>
-                    <option value="상가/사무실">상가/사무실</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>지역구 (동/읍)<span>*</span></label>
-                <input type="text" id="region" placeholder="예: 덕계동" required>
-            </div>
-            <div class="form-group">
-                <label>제품명/대수</label>
-                <input type="text" id="product_info" placeholder="예: 냉장고 1대">
-            </div>
-            <div class="form-group full-width">
-                <label>주소</label>
-                <input type="text" id="address" placeholder="상세 주소 입력">
-            </div>
-            <div class="form-group full-width">
-                <label>양중비 결제 상세 사유<span>*</span></label>
-                <textarea id="reason_detail" placeholder="예: 엘리베이터 없는 5층, 계단 좁음. 사다리차 불가." required></textarea>
-            </div>
-            <div class="form-group full-width">
-                <label>환경사진 업로드<span>*</span></label>
-                <div class="photo-upload">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    <p>사진 촬영 또는 파일 선택</p>
-                    <p style="font-size: 12px; margin-top:5px;">(최대 3장)</p>
-                    <input type="file" id="photos" accept="image/*" multiple required>
-                </div>
-                <div id="photo-preview"></div>
-            </div>
+        <div class="form-group">
+            <label>발생일<span>*</span></label>
+            <input type="date" id="date" required>
         </div>
-        <button type="submit" class="submit-btn">현장 데이터 등록 완료</button>
+        <div class="form-group">
+            <label>센터<span>*</span></label>
+            <select id="center" required>
+                <option value="">선택</option>
+                <option value="양산센터">양산센터</option>
+                <option value="부산센터">부산센터</option>
+                <option value="김해센터">김해센터</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>납품번호<span>*</span></label>
+            <input type="text" id="delivery_id" placeholder="예: 80123456" required>
+        </div>
+        <div class="form-group">
+            <label>차량번호<span>*</span></label>
+            <input type="text" id="car_id" placeholder="예: 12가 3456" required>
+        </div>
+        <div class="form-group">
+            <label>양중비 결제 상세 사유<span>*</span></label>
+            <textarea id="reason_detail" placeholder="상세 사유 입력" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>환경사진 업로드 (최대 3장)<span>*</span></label>
+            <div class="photo-upload">
+                <p>📷 사진 촬영 또는 파일 선택</p>
+                <input type="file" id="photos" accept="image/*" multiple required>
+            </div>
+            <div id="photo-preview"></div>
+        </div>
+        <button type="submit" id="submit-btn" class="submit-btn">클라우드로 전송 및 등록</button>
     </form>
 </div>
 
 <!-- 관리자 조회 화면 -->
 <div id="dashboard-container" class="container">
-    <div class="kpi-grid">
-        <div class="kpi-card"><h3>총 등록 건수</h3><p id="total-count">0</p></div>
-        <div class="kpi-card"><h3>오늘 등록</h3><p id="today-count">0</p></div>
-    </div>
-    <div class="filter-bar">
-        <input type="text" id="search-input" placeholder="납품번호, 차량, 주소 검색">
-        <button class="submit-btn" style="padding: 10px 20px; width: auto;" onclick="downloadCSV()">CSV 다운로드</button>
-    </div>
-    <div id="data-list">
-        <!-- 데이터 목록이 여기에 표시됩니다 -->
-    </div>
-</div>
-
-<!-- 사진 확대 모달 -->
-<div id="photo-modal" class="modal" onclick="closeModal()">
-    <div class="modal-content">
-        <button class="close-modal">&times;</button>
-        <img id="modal-image" src="" alt="확대 사진">
-    </div>
+    <button class="submit-btn" onclick="loadData()" style="margin-bottom:15px;">🔄 데이터 새로고침</button>
+    <div id="data-list">데이터를 불러오는 중입니다...</div>
 </div>
 
 <script>
-    // 모바일 LocalStorage를 사용한 간단한 DB 구현
-    const DB_NAME = 'delivery_env_db_v1';
-    let db = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    let compressedPhotos = [];
 
-    // 초기화 및 탭 열기
     document.addEventListener('DOMContentLoaded', () => {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
-        renderDashboard();
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
     });
 
     function openTab(tabName) {
@@ -178,127 +126,126 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabName + '-container').classList.add('active');
         event.currentTarget.classList.add('active');
-        if (tabName === 'dashboard') renderDashboard();
+        if (tabName === 'dashboard') loadData();
     }
 
-    // 사진 미리보기
-    const photoInput = document.getElementById('photos');
-    const photoPreview = document.getElementById('photo-preview');
-    let encodedPhotos = [];
+    // 이미지 자동 압축
+    document.getElementById('photos').addEventListener('change', (e) => {
+        const preview = document.getElementById('photo-preview');
+        preview.innerHTML = '';
+        compressedPhotos = [];
 
-    photoInput.addEventListener('change', (e) => {
-        photoPreview.innerHTML = '';
-        encodedPhotos = [];
-        const files = Array.from(e.target.files).slice(0, 3); // 최대 3장
-
+        const files = Array.from(e.target.files).slice(0, 3);
         files.forEach(file => {
             const reader = new FileReader();
             reader.onload = (event) => {
-                const img = document.createElement('img');
+                const img = new Image();
                 img.src = event.target.result;
-                photoPreview.appendChild(img);
-                encodedPhotos.push(event.target.result); // Base64 저장
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1000;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    compressedPhotos.push(dataUrl);
+
+                    const previewImg = document.createElement('img');
+                    previewImg.src = dataUrl;
+                    preview.appendChild(previewImg);
+                };
             };
             reader.readAsDataURL(file);
         });
     });
 
-    // 폼 제출 (데이터 등록)
-    document.getElementById('delivery-form').addEventListener('submit', (e) => {
+    // Firebase 전송
+    document.getElementById('delivery-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const newItem = {
-            id: Date.now(),
-            date: document.getElementById('date').value,
-            center: document.getElementById('center').value,
-            delivery_id: document.getElementById('delivery_id').value,
-            customer_name: document.getElementById('customer_name').value || '-',
-            car_id: document.getElementById('car_id').value,
-            house_type: document.getElementById('house_type').value,
-            region: document.getElementById('region').value,
-            product_info: document.getElementById('product_info').value || '-',
-            address: document.getElementById('address').value || '-',
-            reason_detail: document.getElementById('reason_detail').value,
-            photos: encodedPhotos
-        };
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = '사진 압축 및 클라우드 업로드 중...';
 
-        db.unshift(newItem); // 최신 데이터가 위로
-        localStorage.setItem(DB_NAME, JSON.stringify(db));
-        
-        alert('현장 데이터가 성공적으로 등록되었습니다.');
-        e.target.reset();
-        document.getElementById('date').value = newItem.date; // 날짜 유지
-        photoPreview.innerHTML = '';
-        encodedPhotos = [];
+        try {
+            const photoUrls = [];
+            const { ref, uploadString, getDownloadURL, collection, addDoc } = window.fbFunctions;
+
+            for (let i = 0; i < compressedPhotos.length; i++) {
+                const photoRef = ref(window.storage, `photos/${Date.now()}_${i}.jpg`);
+                await uploadString(photoRef, compressedPhotos[i], 'data_url');
+                const url = await getDownloadURL(photoRef);
+                photoUrls.push(url);
+            }
+
+            await addDoc(collection(window.db, "deliveries"), {
+                date: document.getElementById('date').value,
+                center: document.getElementById('center').value,
+                delivery_id: document.getElementById('delivery_id').value,
+                car_id: document.getElementById('car_id').value,
+                reason_detail: document.getElementById('reason_detail').value,
+                photos: photoUrls,
+                createdAt: new Date()
+            });
+
+            alert('Firebase 클라우드에 성공적으로 저장되었습니다!');
+            e.target.reset();
+            document.getElementById('photo-preview').innerHTML = '';
+            compressedPhotos = [];
+        } catch (err) {
+            console.error(err);
+            alert('업로드 실패: ' + err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '클라우드로 전송 및 등록';
+        }
     });
 
-    // 대시보드 렌더링
-    function renderDashboard() {
+    // 관리자 데이터 불러오기
+    async function loadData() {
         const list = document.getElementById('data-list');
-        list.innerHTML = '';
-        
-        document.getElementById('total-count').innerText = db.length;
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('today-count').innerText = db.filter(item => item.date === today).length;
+        list.innerHTML = '불러오는 중...';
 
-        db.forEach(item => {
-            const el = document.createElement('div');
-            el.className = 'data-item';
-            el.innerHTML = `
-                <div class="data-item-header">
-                    <span class="id">${item.delivery_id}</span>
-                    <span class="date">${item.date}</span>
-                </div>
-                <div class="data-item-body">
-                    <span class="label">센터</span><span class="value">${item.center}</span>
-                    <span class="label">차량</span><span class="value">${item.car_id}</span>
-                    <span class="label">구조</span><span class="value">${item.house_type}</span>
-                    <span class="label">지역</span><span class="value">${item.region}</span>
-                    <span class="label">사유</span><span class="value">${item.reason_detail}</span>
-                    ${item.photos.map(p => `<img src="${p}" onclick="openModal('${p}')">`).join('')}
-                </div>
-            `;
-            list.appendChild(el);
-        });
-    }
+        try {
+            const { collection, getDocs, query, orderBy } = window.fbFunctions;
+            const q = query(collection(window.db, "deliveries"), orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
 
-    // 검색 기능
-    document.getElementById('search-input').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const items = document.querySelectorAll('.data-item');
-        items.forEach(item => {
-            const text = item.innerText.toLowerCase();
-            item.style.display = text.includes(term) ? 'block' : 'none';
-        });
-    });
+            list.innerHTML = '';
+            if (querySnapshot.empty) {
+                list.innerHTML = '등록된 데이터가 없습니다.';
+                return;
+            }
 
-    // 사진 모달
-    function openModal(src) {
-        document.getElementById('modal-image').src = src;
-        document.getElementById('photo-modal').style.display = 'flex';
-    }
-    function closeModal() {
-        document.getElementById('photo-modal').style.display = 'none';
-    }
-
-    // CSV 다운로드 (엑셀 연동)
-    function downloadCSV() {
-        if (db.length === 0) { alert('다운로드할 데이터가 없습니다.'); return; }
-        
-        let csv = '\uFEFF'; // 한글 깨짐 방지 BOM
-        csv += '등록ID,발생일,센터,납품번호,거래선,차량번호,가옥구조,지역구,제품정보,주소,상세사유\n';
-        
-        db.forEach(item => {
-            csv += `"${item.id}","${item.date}","${item.center}","${item.delivery_id}","${item.customer_name}","${item.car_id}","${item.house_type}","${item.region}","${item.product_info}","${item.address}","${item.reason_detail.replace(/"/g, '""')}"\n`;
-        });
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute('download', `delivery_data_${new Date().toISOString().slice(0,10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const el = document.createElement('div');
+                el.className = 'data-item';
+                el.innerHTML = `
+                    <div class="data-item-header">
+                        <span>${data.delivery_id} (${data.car_id})</span>
+                        <span>${data.date}</span>
+                    </div>
+                    <p><b>센터:</b> ${data.center}</p>
+                    <p><b>사유:</b> ${data.reason_detail}</p>
+                    <div class="img-grid">
+                        ${data.photos.map(url => `<a href="${url}" target="_blank"><img src="${url}"></a>`).join('')}
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+        } catch (err) {
+            list.innerHTML = '데이터 로딩 실패: ' + err.message;
+        }
     }
 </script>
 
