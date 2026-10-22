@@ -77,15 +77,6 @@
             <input type="date" id="date" required>
         </div>
         <div class="form-group">
-            <label>센터<span>*</span></label>
-            <select id="center" required>
-                <option value="">선택</option>
-                <option value="양산센터">양산센터</option>
-                <option value="부산센터">부산센터</option>
-                <option value="김해센터">김해센터</option>
-            </select>
-        </div>
-        <div class="form-group">
             <label>납품번호<span>*</span></label>
             <input type="text" id="delivery_id" placeholder="예: 7123456789" required>
         </div>
@@ -271,7 +262,6 @@
                 photoUrls.push(url);
             }
 
-            // 각 대수별 모델명, 무게, 금액 배열 수집
             const items = [];
             const modelInputs = document.querySelectorAll('.item-model');
             const weightInputs = document.querySelectorAll('.item-weight');
@@ -288,7 +278,6 @@
 
             await addDoc(collection(window.db, "deliveries"), {
                 date: document.getElementById('date').value,
-                center: document.getElementById('center').value,
                 delivery_id: document.getElementById('delivery_id').value,
                 car_id: document.getElementById('car_id').value,
                 house_type: document.getElementById('house_type').value,
@@ -348,7 +337,7 @@
                         <span>납품번호: ${data.delivery_id} (${data.car_id})</span>
                         <span>${data.date}</span>
                     </div>
-                    <p><b>센터:</b> ${data.center} | <b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
+                    <p><b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
                     <p><b>청구 대수:</b> 총 ${data.quantity}대</p>
                     <p><b>제품별 상세 내역:</b><br>${itemsHtml}</p>
                     <p style="color:#2563eb; font-weight:bold;"><b>총 합계금액:</b> ${Number(data.totalPrice || 0).toLocaleString()} 원</p>
