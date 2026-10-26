@@ -28,17 +28,33 @@
         #photo-preview img { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; }
         .submit-btn { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
         .submit-btn:disabled { background: #9ca3af; }
+        .excel-btn { width: 100%; padding: 12px; background: #10b981; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+        .print-btn { width: 100%; padding: 12px; background: #8b5cf6; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+        .delete-btn { background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; float: right; }
         .data-item { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
         .data-item-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; font-size: 15px; }
         .img-grid { display: flex; gap: 5px; margin-top: 10px; }
         .img-grid img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
         .auth-box { background: #fff; padding: 30px 20px; border-radius: 8px; text-align: center; border: 1px solid #e5e7eb; margin-top: 20px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        
+        /* 통계 및 용량 카드 스타일 */
+        .stats-card { background: #fff; border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-top: 8px; }
+        .stat-box { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .stat-box span { display: block; font-size: 16px; font-weight: bold; color: #2563eb; margin-top: 4px; }
+
+        @media print {
+            header, .tabs, .btn-group, .auth-box, .delete-btn, .print-btn { display: none !important; }
+            .container { display: block !important; padding: 0 !important; }
+            .data-item { page-break-inside: avoid; border: 1px solid #000; margin-bottom: 20px; }
+        }
     </style>
 
     <!-- Firebase SDK 연동 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBJdPArpj_i61crrpEomzpN73euuwh_X84",
@@ -53,7 +69,7 @@
         const db = getFirestore(app);
 
         window.db = db;
-        window.fbFunctions = { collection, addDoc, getDocs, query, orderBy };
+        window.fbFunctions = { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy };
     </script>
 </head>
 <body>
@@ -152,13 +168,32 @@
     </div>
 
     <div id="dashboard-content" style="display: none;">
-        <button class="submit-btn" onclick="loadData()" style="margin-bottom:15px;">🔄 데이터 새로고침</button>
+        <!-- 통계 및 용량 안내 카드 -->
+        <div class="stats-card">
+            <b>📊 실시간 운영 현황</b>
+            <div class="stats-grid">
+                <div class="stat-box">오늘 건수<span id="stat-daily">0건</span></div>
+                <div class="stat-box">이번달 건수<span id="stat-monthly">0건</span></div>
+                <div class="stat-box">총 누적 건수<span id="stat-total">0건</span></div>
+            </div>
+            <div style="margin-top: 10px; font-size: 13px; color: #4b5563; display: flex; justify-content: space-between;">
+                <span id="db-usage">db 용량 계산중...</span>
+                <span style="color:#2563eb; font-weight:bold;">무료 제한: 1GB 중 극소량 사용 중</span>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="submit-btn" onclick="loadData()">🔄 새로고침</button>
+            <button class="excel-btn" onclick="downloadExcel()">📥 엑셀 다운로드</button>
+        </div>
+        <button class="print-btn" onclick="window.print()" style="margin-bottom: 15px;">🖨️ 보고서/사진 포함 PDF 출력</button>
         <div id="data-list">데이터를 불러오는 중입니다...</div>
     </div>
 </div>
 
 <script>
     let compressedPhotos = [];
+    let fetchedDataList = [];
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
@@ -187,9 +222,7 @@
         const qty = parseInt(document.getElementById('quantity').value) || 0;
         const container = document.getElementById('dynamic-items-container');
         
-        // 이미 생성되어 있다면 중복 생성 방지
         if (container.children.length === qty) return;
-
         container.innerHTML = '';
 
         for (let i = 1; i <= qty; i++) {
@@ -214,7 +247,6 @@
         calculateTotal();
     }
 
-    // 추가로 값이 바뀔 때마다 확실하게 갱신되도록 이벤트 리스너 추가
     document.getElementById('quantity').addEventListener('change', renderItemRows);
     document.getElementById('quantity').addEventListener('blur', renderItemRows);
 
@@ -274,3 +306,155 @@
         submitBtn.innerText = '안전하게 전송 중...';
 
         try {
+            const items = [];
+            const modelInputs = document.querySelectorAll('.item-model');
+            const weightInputs = document.querySelectorAll('.item-weight');
+            const priceInputs = document.querySelectorAll('.item-price');
+            let totalPrice = 0;
+
+            for(let i=0; i<modelInputs.length; i++) {
+                const m = modelInputs[i].value;
+                const w = weightInputs[i].value;
+                const p = parseFloat(priceInputs[i].value) || 0;
+                totalPrice += p;
+                items.push({ model: m, weight: w, price: p });
+            }
+
+            const { collection, addDoc } = window.fbFunctions;
+            await addDoc(collection(window.db, "deliveries"), {
+                date: document.getElementById('date').value,
+                delivery_id: document.getElementById('delivery_id').value,
+                car_id: document.getElementById('car_id').value,
+                house_type: document.getElementById('house_type').value,
+                region: document.getElementById('region').value,
+                floor: document.getElementById('floor').value,
+                quantity: document.getElementById('quantity').value,
+                items: items,
+                totalPrice: totalPrice,
+                reason_detail: document.getElementById('reason_detail').value,
+                photos: compressedPhotos,
+                createdAt: new Date()
+            });
+
+            alert('성공적으로 저장되었습니다!');
+            e.target.reset();
+            document.getElementById('dynamic-items-container').innerHTML = '';
+            document.getElementById('total-amount-box').innerText = '총 합계금액: 0 원';
+            document.getElementById('photo-preview').innerHTML = '';
+            compressedPhotos = [];
+        } catch (err) {
+            console.error(err);
+            alert('업로드 실패: ' + err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '클라우드로 전송 및 등록';
+        }
+    });
+
+    async function loadData() {
+        const list = document.getElementById('data-list');
+        list.innerHTML = '불러오는 중...';
+        fetchedDataList = [];
+
+        try {
+            const { collection, getDocs, query, orderBy } = window.fbFunctions;
+            const q = query(collection(window.db, "deliveries"), orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+
+            list.innerHTML = '';
+            if (querySnapshot.empty) {
+                list.innerHTML = '등록된 데이터가 없습니다.';
+                document.getElementById('stat-daily').innerText = '0건';
+                document.getElementById('stat-monthly').innerText = '0건';
+                document.getElementById('stat-total').innerText = '0건';
+                document.getElementById('db-usage').innerText = '데이터 용량: 약 0 KB';
+                return;
+            }
+
+            let totalBytes = 0;
+            let dailyCount = 0;
+            let monthlyCount = 0;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const currentMonthStr = todayStr.substring(0, 7); // YYYY-MM
+
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                data.docId = docSnap.id; // 삭제용 문서 ID 저장
+                fetchedDataList.push(data);
+
+                // 통계 집계
+                if (data.date === todayStr) dailyCount++;
+                if (data.date && data.date.startsWith(currentMonthStr)) monthlyCount++;
+
+                // 용량 계산 (JSON 문자열 대략적 크기 측정)
+                totalBytes += JSON.stringify(data).length;
+
+                const el = document.createElement('div');
+                el.className = 'data-item';
+                
+                let itemsHtml = '';
+                if(data.items && data.items.length > 0) {
+                    itemsHtml = data.items.map((item, idx) => `&nbsp;&nbsp;- ${idx+1}번: [${item.model}] 무게 ${item.weight}kg / 금액 ${Number(item.price).toLocaleString()}원<br>`).join('');
+                }
+
+                el.innerHTML = `
+                    <button class="delete-btn" onclick="deleteData('${data.docId}')">🗑️ 삭제</button>
+                    <div class="data-item-header">
+                        <span>납품번호: ${data.delivery_id} (${data.car_id})</span>
+                        <span>${data.date}</span>
+                    </div>
+                    <p><b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
+                    <p><b>청구 대수:</b> 총 ${data.quantity}대</p>
+                    <p><b>제품별 상세 내역:</b><br>${itemsHtml}</p>
+                    <p style="color:#2563eb; font-weight:bold;"><b>총 합계금액:</b> ${Number(data.totalPrice || 0).toLocaleString()} 원</p>
+                    <p><b>특수장비사용불가 사유:</b> ${data.reason_detail}</p>
+                    <div class="img-grid">
+                        ${(data.photos || []).map((url) => `<a href="${url}" target="_blank"><img src="${url}" title="클릭하여 원본보기"></a>`).join('')}
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+
+            // 상단 통계 수치 반영
+            document.getElementById('stat-daily').innerText = dailyCount + '건';
+            document.getElementById('stat-monthly').innerText = monthlyCount + '건';
+            document.getElementById('stat-total').innerText = fetchedDataList.length + '건';
+
+            // 용량 표시 변환 (KB 또는 MB)
+            let sizeDisplay = (totalBytes / 1024).toFixed(1) + ' KB';
+            if (totalBytes > 1024 * 1024) {
+                sizeDisplay = (totalBytes / (1024 * 1024)).toFixed(2) + ' MB';
+            }
+            document.getElementById('db-usage').innerText = `총 데이터 용량: 약 ${sizeDisplay}`;
+
+        } catch (err) {
+            list.innerHTML = '데이터 로딩 실패: ' + err.message;
+        }
+    }
+
+    // 개별 데이터 삭제 함수
+    async function deleteData(docId) {
+        if (!confirm('정말 이 데이터를 삭제하시겠습니까?')) return;
+
+        try {
+            const { doc, deleteDoc } = window.fbFunctions;
+            await deleteDoc(doc(window.db, "deliveries", docId));
+            alert('성공적으로 삭제되었습니다.');
+            loadData(); // 목록 새로고침
+        } catch (err) {
+            alert('삭제 실패: ' + err.message);
+        }
+    }
+
+    function downloadExcel() {
+        if (!fetchedDataList || fetchedDataList.length === 0) {
+            alert('다운로드할 데이터가 없습니다.');
+            return;
+        }
+
+        let csvContent = "\uFEFF";
+        csvContent += "발생일,납품번호,차량번호,가옥구조,지역,층수,청구대수,제품상세,총합계금액(원),결제사유,사진링크(1),사진링크(2),사진링크(3)\n";
+
+        fetchedDataList.forEach(row => {
+            let itemDetails = "";
+            if (row.items && row.items.length > 0) {
