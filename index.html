@@ -56,3 +56,166 @@
 
         .filter-box { background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 15px; }
         .filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .filter-row:last-child { margin-bottom: 0; }
+        .admin-btn-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        .admin-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; color: #fff; }
+        .btn-refresh { background: #4b5563; }
+        .btn-excel { background: #059669; }
+        .btn-search { background: var(--primary); }
+        
+        #image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        #image-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+    </style>
+
+    <!-- Firebase SDK 연동 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJdPArpj_i61crrpEomzpN73euuwh_X84",
+            authDomain: "yang-delivery-system.firebaseapp.com",
+            projectId: "yang-delivery-system",
+            storageBucket: "yang-delivery-system.firebasestorage.app",
+            messagingSenderId: "723188059505",
+            appId: "1:723188059505:web:35818e40a9a88d34ef7ad0"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            window.db = db;
+            window.fbFunctions = { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy };
+        } catch (error) {
+            console.error("Firebase 연결 실패:", error);
+            alert("시스템 초기화 오류: " + error.message);
+        }
+    </script>
+</head>
+<body>
+
+<header>
+    <h1>가전 배송환경 및 양중비 관제 System</h1>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="openTab('input', event)">현장 입력 (기사님용)</button>
+    <button class="tab-btn" onclick="openTab('dashboard', event)">조회 (관리자용)</button>
+</div>
+
+<!-- 기사님 입력 화면 -->
+<div id="input-container" class="container active">
+    <form id="delivery-form">
+        <div class="form-group">
+            <label>발생일<span>*</span></label>
+            <input type="date" id="date" required>
+        </div>
+        <div class="form-group">
+            <label>납품번호<span>*</span></label>
+            <input type="text" id="delivery_id" placeholder="예: 7123456789" required>
+        </div>
+        <div class="form-group">
+            <label>차량번호<span>*</span></label>
+            <input type="text" id="car_id" placeholder="예: 대구81아1234" required>
+        </div>
+        <div class="form-group">
+            <label>가옥구조<span>*</span></label>
+            <select id="house_type" required>
+                <option value="">선택</option>
+                <option value="아파트">아파트</option>
+                <option value="단독주택">단독주택</option>
+                <option value="상가">상가</option>
+                <option value="빌라">빌라</option>
+                <option value="기타">기타</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>지역<span>*</span></label>
+            <input type="text" id="region" placeholder="예: 해운대구 우동" required>
+        </div>
+        <div class="form-group">
+            <label>층수<span>*</span></label>
+            <input type="number" id="floor" placeholder="예: 5" required>
+        </div>
+        
+        <div class="form-group">
+            <label>양중비청구 댓수 선택 (1~5대)<span>*</span></label>
+            <input type="hidden" id="quantity" value="" required>
+            <div class="qty-grid" id="qty-btn-container">
+                <button type="button" class="qty-btn" onclick="selectQuantity(1)">1대</button>
+                <button type="button" class="qty-btn" onclick="selectQuantity(2)">2대</button>
+                <button type="button" class="qty-btn" onclick="selectQuantity(3)">3대</button>
+                <button type="button" class="qty-btn" onclick="selectQuantity(4)">4대</button>
+                <button type="button" class="qty-btn" onclick="selectQuantity(5)">5대</button>
+            </div>
+        </div>
+
+        <!-- 1~5대 입력 폼 미리 생성 -->
+        <div id="dynamic-items-container">
+            <div class="dynamic-rows" data-index="1">
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ 1번째 제품 정보 ]</label>
+                <div style="margin-bottom:8px;"><input type="text" placeholder="모델명 입력 (예: RF85C9011AP)" class="item-model"></div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><input type="number" placeholder="제품무게 (kg)" class="item-weight"></div>
+                    <div style="flex:1;"><input type="number" placeholder="결제금액 (원)" class="item-price" oninput="calculateTotal()"></div>
+                </div>
+            </div>
+            <div class="dynamic-rows" data-index="2">
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ 2번째 제품 정보 ]</label>
+                <div style="margin-bottom:8px;"><input type="text" placeholder="모델명 입력" class="item-model"></div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><input type="number" placeholder="제품무게 (kg)" class="item-weight"></div>
+                    <div style="flex:1;"><input type="number" placeholder="결제금액 (원)" class="item-price" oninput="calculateTotal()"></div>
+                </div>
+            </div>
+            <div class="dynamic-rows" data-index="3">
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ 3번째 제품 정보 ]</label>
+                <div style="margin-bottom:8px;"><input type="text" placeholder="모델명 입력" class="item-model"></div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><input type="number" placeholder="제품무게 (kg)" class="item-weight"></div>
+                    <div style="flex:1;"><input type="number" placeholder="결제금액 (원)" class="item-price" oninput="calculateTotal()"></div>
+                </div>
+            </div>
+            <div class="dynamic-rows" data-index="4">
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ 4번째 제품 정보 ]</label>
+                <div style="margin-bottom:8px;"><input type="text" placeholder="모델명 입력" class="item-model"></div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><input type="number" placeholder="제품무게 (kg)" class="item-weight"></div>
+                    <div style="flex:1;"><input type="number" placeholder="결제금액 (원)" class="item-price" oninput="calculateTotal()"></div>
+                </div>
+            </div>
+            <div class="dynamic-rows" data-index="5">
+                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ 5번째 제품 정보 ]</label>
+                <div style="margin-bottom:8px;"><input type="text" placeholder="모델명 입력" class="item-model"></div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><input type="number" placeholder="제품무게 (kg)" class="item-weight"></div>
+                    <div style="flex:1;"><input type="number" placeholder="결제금액 (원)" class="item-price" oninput="calculateTotal()"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="total-box" id="total-amount-box">
+            총 합계금액: 0 원
+        </div>
+
+        <div class="form-group">
+            <label>특수장비사용불가 (양중비 결제 상세 사유)<span>*</span></label>
+            <textarea id="reason_detail" placeholder="상세내용" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>환경사진 업로드 (최대 3장)<span>*</span></label>
+            <div class="photo-upload">
+                <p>📷 사진 촬영 또는 파일 선택</p>
+                <input type="file" id="photos" accept="image/*" multiple required>
+            </div>
+            <div id="photo-preview"></div>
+        </div>
+        <button type="submit" id="submit-btn" class="submit-btn">클라우드로 전송 및 등록</button>
+    </form>
+</div>
+
+<!-- 관리자 조회 화면 -->
+<div id="dashboard-container" class="container">
+    <div id="auth-box" class="auth-box">
+        <h3 style="margin-bottom: 15px; color: #1f2937;">🔒 관리자 인증</h3>
+        <p style="margin-bottom: 15px; font-size: 14px; color: #6b
