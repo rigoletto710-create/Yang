@@ -104,7 +104,7 @@
         
         <div class="form-group">
             <label>양중비청구 댓수 (1~10)<span>*</span></label>
-            <select id="quantity" required onchange="renderItemRows()">
+            <select id="quantity" required onchange="renderItemRows()" onclick="renderItemRows()">
                 <option value="">선택</option>
                 <option value="1">1대</option>
                 <option value="2">2대</option>
@@ -186,6 +186,10 @@
     function renderItemRows() {
         const qty = parseInt(document.getElementById('quantity').value) || 0;
         const container = document.getElementById('dynamic-items-container');
+        
+        // 이미 생성되어 있다면 중복 생성 방지
+        if (container.children.length === qty) return;
+
         container.innerHTML = '';
 
         for (let i = 1; i <= qty; i++) {
@@ -210,6 +214,10 @@
         calculateTotal();
     }
 
+    // 추가로 값이 바뀔 때마다 확실하게 갱신되도록 이벤트 리스너 추가
+    document.getElementById('quantity').addEventListener('change', renderItemRows);
+    document.getElementById('quantity').addEventListener('blur', renderItemRows);
+
     function calculateTotal() {
         const priceInputs = document.querySelectorAll('.item-price');
         let total = 0;
@@ -220,7 +228,6 @@
         document.getElementById('total-amount-box').innerText = `총 합계금액: ${total.toLocaleString()} 원`;
     }
 
-    // 안전하고 가벼운 이미지 압축 처리
     document.getElementById('photos').addEventListener('change', (e) => {
         const preview = document.getElementById('photo-preview');
         preview.innerHTML = '';
@@ -234,7 +241,7 @@
                 img.src = event.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 600; // 용량 최적화 크기
+                    const MAX_WIDTH = 600;
                     let width = img.width;
                     let height = img.height;
 
@@ -248,7 +255,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.5); // 고압축률 적용
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
                     compressedPhotos.push(dataUrl);
 
                     const previewImg = document.createElement('img');
@@ -267,97 +274,3 @@
         submitBtn.innerText = '안전하게 전송 중...';
 
         try {
-            const items = [];
-            const modelInputs = document.querySelectorAll('.item-model');
-            const weightInputs = document.querySelectorAll('.item-weight');
-            const priceInputs = document.querySelectorAll('.item-price');
-            let totalPrice = 0;
-
-            for(let i=0; i<modelInputs.length; i++) {
-                const m = modelInputs[i].value;
-                const w = weightInputs[i].value;
-                const p = parseFloat(priceInputs[i].value) || 0;
-                totalPrice += p;
-                items.push({ model: m, weight: w, price: p });
-            }
-
-            const { collection, addDoc } = window.fbFunctions;
-            await addDoc(collection(window.db, "deliveries"), {
-                date: document.getElementById('date').value,
-                delivery_id: document.getElementById('delivery_id').value,
-                car_id: document.getElementById('car_id').value,
-                house_type: document.getElementById('house_type').value,
-                region: document.getElementById('region').value,
-                floor: document.getElementById('floor').value,
-                quantity: document.getElementById('quantity').value,
-                items: items,
-                totalPrice: totalPrice,
-                reason_detail: document.getElementById('reason_detail').value,
-                photos: compressedPhotos,
-                createdAt: new Date()
-            });
-
-            alert('성공적으로 저장되었습니다!');
-            e.target.reset();
-            document.getElementById('dynamic-items-container').innerHTML = '';
-            document.getElementById('total-amount-box').innerText = '총 합계금액: 0 원';
-            document.getElementById('photo-preview').innerHTML = '';
-            compressedPhotos = [];
-        } catch (err) {
-            console.error(err);
-            alert('업로드 실패: ' + err.message);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '클라우드로 전송 및 등록';
-        }
-    });
-
-    async function loadData() {
-        const list = document.getElementById('data-list');
-        list.innerHTML = '불러오는 중...';
-
-        try {
-            const { collection, getDocs, query, orderBy } = window.fbFunctions;
-            const q = query(collection(window.db, "deliveries"), orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
-
-            list.innerHTML = '';
-            if (querySnapshot.empty) {
-                list.innerHTML = '등록된 데이터가 없습니다.';
-                return;
-            }
-
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const el = document.createElement('div');
-                el.className = 'data-item';
-                
-                let itemsHtml = '';
-                if(data.items && data.items.length > 0) {
-                    itemsHtml = data.items.map((item, idx) => `&nbsp;&nbsp;- ${idx+1}번: [${item.model}] 무게 ${item.weight}kg / 금액 ${Number(item.price).toLocaleString()}원<br>`).join('');
-                }
-
-                el.innerHTML = `
-                    <div class="data-item-header">
-                        <span>납품번호: ${data.delivery_id} (${data.car_id})</span>
-                        <span>${data.date}</span>
-                    </div>
-                    <p><b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
-                    <p><b>청구 대수:</b> 총 ${data.quantity}대</p>
-                    <p><b>제품별 상세 내역:</b><br>${itemsHtml}</p>
-                    <p style="color:#2563eb; font-weight:bold;"><b>총 합계금액:</b> ${Number(data.totalPrice || 0).toLocaleString()} 원</p>
-                    <p><b>특수장비사용불가 사유:</b> ${data.reason_detail}</p>
-                    <div class="img-grid">
-                        ${(data.photos || []).map(url => `<img src="${url}">`).join('')}
-                    </div>
-                `;
-                list.appendChild(el);
-            });
-        } catch (err) {
-            list.innerHTML = '데이터 로딩 실패: ' + err.message;
-        }
-    }
-</script>
-
-</body>
-</html>
