@@ -18,7 +18,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #4b5563; }
         .form-group label span { color: #ef4444; margin-left: 2px; }
-        input[type="text"], input[type="date"], input[type="number"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; background: #fff; }
+        input[type="text"], input[type="date"], input[type="number"], input[type="password"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; background: #fff; }
         textarea { resize: vertical; height: 70px; }
         .dynamic-rows { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
         .total-box { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-weight: bold; text-align: right; color: #1e40af; margin-bottom: 15px; }
@@ -32,6 +32,7 @@
         .data-item-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; font-size: 15px; }
         .img-grid { display: flex; gap: 5px; margin-top: 10px; }
         .img-grid img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+        .auth-box { background: #fff; padding: 30px 20px; border-radius: 8px; text-align: center; border: 1px solid #e5e7eb; margin-top: 20px; }
     </style>
 
     <!-- Firebase SDK 연동 (Firestore만 사용) -->
@@ -118,7 +119,7 @@
             </select>
         </div>
 
-        <!-- 댓수별 동적 입력 영역 (여기에 대수만큼 모델명/무게/금액 칸이 생성됩니다) -->
+        <!-- 댓수별 동적 입력 영역 -->
         <div id="dynamic-items-container"></div>
 
         <div class="total-box" id="total-amount-box">
@@ -143,8 +144,19 @@
 
 <!-- 관리자 조회 화면 -->
 <div id="dashboard-container" class="container">
-    <button class="submit-btn" onclick="loadData()" style="margin-bottom:15px;">🔄 데이터 새로고침</button>
-    <div id="data-list">데이터를 불러오는 중입니다...</div>
+    <!-- 비밀번호 입력 인증 박스 -->
+    <div id="auth-box" class="auth-box">
+        <h3 style="margin-bottom: 15px; color: #1f2937;">🔒 관리자 인증</h3>
+        <p style="margin-bottom: 15px; font-size: 14px; color: #6b7280;">관리자 비밀번호를 입력해주세요.</p>
+        <input type="password" id="admin-pw" placeholder="비밀번호 입력" style="margin-bottom: 15px; text-align: center; font-size: 18px; letter-spacing: 3px;">
+        <button class="submit-btn" onclick="checkPassword()">확인</button>
+    </div>
+
+    <!-- 실제 데이터 조회 영역 (비밀번호 인증 전에는 숨김) -->
+    <div id="dashboard-content" style="display: none;">
+        <button class="submit-btn" onclick="loadData()" style="margin-bottom:15px;">🔄 데이터 새로고침</button>
+        <div id="data-list">데이터를 불러오는 중입니다...</div>
+    </div>
 </div>
 
 <script>
@@ -159,183 +171,15 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabName + '-container').classList.add('active');
         event.currentTarget.classList.add('active');
-        if (tabName === 'dashboard') loadData();
-    }
-
-    function renderItemRows() {
-        const qty = parseInt(document.getElementById('quantity').value) || 0;
-        const container = document.getElementById('dynamic-items-container');
-        container.innerHTML = '';
-
-        for (let i = 1; i <= qty; i++) {
-            const div = document.createElement('div');
-            div.className = 'dynamic-rows';
-            div.innerHTML = `
-                <label style="font-size:13px; font-weight:bold; color:#2563eb; margin-bottom:8px; display:block;">[ ${i}번째 제품 정보 ]</label>
-                <div style="margin-bottom:8px;">
-                    <input type="text" placeholder="모델명 입력 (예: RF85C9011AP)" class="item-model" required>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <div style="flex:1;">
-                        <input type="number" placeholder="제품무게 (kg)" class="item-weight" required>
-                    </div>
-                    <div style="flex:1;">
-                        <input type="number" placeholder="결제금액 (원)" class="item-price" required oninput="calculateTotal()">
-                    </div>
-                </div>
-            `;
-            container.appendChild(div);
-        }
-        calculateTotal();
-    }
-
-    function calculateTotal() {
-        const priceInputs = document.querySelectorAll('.item-price');
-        let total = 0;
-        priceInputs.forEach(input => {
-            const val = parseFloat(input.value) || 0;
-            total += val;
-        });
-        document.getElementById('total-amount-box').innerText = `총 합계금액: ${total.toLocaleString()} 원`;
-    }
-
-    document.getElementById('photos').addEventListener('change', (e) => {
-        const preview = document.getElementById('photo-preview');
-        preview.innerHTML = '';
-        compressedPhotos = [];
-
-        const files = Array.from(e.target.files).slice(0, 3);
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-                    compressedPhotos.push(dataUrl);
-
-                    const previewImg = document.createElement('img');
-                    previewImg.src = dataUrl;
-                    preview.appendChild(previewImg);
-                };
-            };
-            reader.readAsDataURL(file);
-        });
-    });
-
-    document.getElementById('delivery-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = document.getElementById('submit-btn');
-        submitBtn.disabled = true;
-        submitBtn.innerText = '데이터 및 사진 전송 중...';
-
-        try {
-            const items = [];
-            const modelInputs = document.querySelectorAll('.item-model');
-            const weightInputs = document.querySelectorAll('.item-weight');
-            const priceInputs = document.querySelectorAll('.item-price');
-            let totalPrice = 0;
-
-            for(let i=0; i<modelInputs.length; i++) {
-                const m = modelInputs[i].value;
-                const w = weightInputs[i].value;
-                const p = parseFloat(priceInputs[i].value) || 0;
-                totalPrice += p;
-                items.push({ model: m, weight: w, price: p });
-            }
-
-            const { collection, addDoc } = window.fbFunctions;
-            await addDoc(collection(window.db, "deliveries"), {
-                date: document.getElementById('date').value,
-                delivery_id: document.getElementById('delivery_id').value,
-                car_id: document.getElementById('car_id').value,
-                house_type: document.getElementById('house_type').value,
-                region: document.getElementById('region').value,
-                floor: document.getElementById('floor').value,
-                quantity: document.getElementById('quantity').value,
-                items: items,
-                totalPrice: totalPrice,
-                reason_detail: document.getElementById('reason_detail').value,
-                photos: compressedPhotos,
-                createdAt: new Date()
-            });
-
-            alert('성공적으로 저장되었습니다!');
-            e.target.reset();
-            document.getElementById('dynamic-items-container').innerHTML = '';
-            document.getElementById('total-amount-box').innerText = '총 합계금액: 0 원';
-            document.getElementById('photo-preview').innerHTML = '';
-            compressedPhotos = [];
-        } catch (err) {
-            console.error(err);
-            alert('업로드 실패: ' + err.message);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '클라우드로 전송 및 등록';
-        }
-    });
-
-    async function loadData() {
-        const list = document.getElementById('data-list');
-        list.innerHTML = '불러오는 중...';
-
-        try {
-            const { collection, getDocs, query, orderBy } = window.fbFunctions;
-            const q = query(collection(window.db, "deliveries"), orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
-
-            list.innerHTML = '';
-            if (querySnapshot.empty) {
-                list.innerHTML = '등록된 데이터가 없습니다.';
-                return;
-            }
-
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const el = document.createElement('div');
-                el.className = 'data-item';
-                
-                let itemsHtml = '';
-                if(data.items && data.items.length > 0) {
-                    itemsHtml = data.items.map((item, idx) => `&nbsp;&nbsp;- ${idx+1}번: [${item.model}] 무게 ${item.weight}kg / 금액 ${Number(item.price).toLocaleString()}원<br>`).join('');
-                }
-
-                el.innerHTML = `
-                    <div class="data-item-header">
-                        <span>납품번호: ${data.delivery_id} (${data.car_id})</span>
-                        <span>${data.date}</span>
-                    </div>
-                    <p><b>지역:</b> ${data.region} (${data.house_type} ${data.floor}층)</p>
-                    <p><b>청구 대수:</b> 총 ${data.quantity}대</p>
-                    <p><b>제품별 상세 내역:</b><br>${itemsHtml}</p>
-                    <p style="color:#2563eb; font-weight:bold;"><b>총 합계금액:</b> ${Number(data.totalPrice || 0).toLocaleString()} 원</p>
-                    <p><b>특수장비사용불가 사유:</b> ${data.reason_detail}</p>
-                    <div class="img-grid">
-                        ${(data.photos || []).map(url => `<a href="${url}" target="_blank"><img src="${url}"></a>`).join('')}
-                    </div>
-                `;
-                list.appendChild(el);
-            });
-        } catch (err) {
-            list.innerHTML = '데이터 로딩 실패: ' + err.message;
+        
+        // 관리자 탭을 누를 때마다 인증 초기화 필요 시 적용 가능 (현재는 인증 유지 혹은 재입력)
+        if (tabName === 'dashboard') {
+            // 원하실 경우 탭 누를 때마다 잠기게 하려면 아래 주석 해제
+            // document.getElementById('auth-box').style.display = 'block';
+            // document.getElementById('dashboard-content').style.display = 'none';
+            // document.getElementById('admin-pw').value = '';
         }
     }
-</script>
 
-</body>
-</html>
+    // 관리자 비밀번호 확인
+    
